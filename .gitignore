@@ -1,0 +1,17 @@
+# Python (оставлена локально, не публикуется)
+ISOM/
+__pycache__/
+*.pyc
+
+# C build artifacts
+ISOM_C/isom
+ISOM_C/*.o
+ISOM_C/*.dSYM/
+
+# macOS
+.DS_Store
+
+# Editor temp files
+*.swp
+*.swo
+*~
