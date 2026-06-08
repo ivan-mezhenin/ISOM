@@ -110,3 +110,58 @@ GraphChar* calc_char(Hypergraph* g) {
     return gc;
 }
 
+void free_char(GraphChar* gc) {
+    if (gc) { if (gc->items) free(gc->items); free(gc); }
+}
+
+int cmp_argchar(const void* a, const void* b) {
+    ArgChar* ac1 = (ArgChar*)a;
+    ArgChar* ac2 = (ArgChar*)b;
+    for (int i = 0; i < MAX_ARGS; i++) {
+        if (ac1->vec[i] < ac2->vec[i]) return -1;
+        if (ac1->vec[i] > ac2->vec[i]) return 1;
+    }
+    return strcmp(ac1->name, ac2->name);
+}
+
+void sort_char(GraphChar* gc) {
+    qsort(gc->items, gc->count, sizeof(ArgChar), cmp_argchar);
+}
+
+bool cmp_chars(GraphChar* c1, GraphChar* c2) {
+    if (c1->count != c2->count || c1->arity != c2->arity) return false;
+    sort_char(c1);
+    sort_char(c2);
+    for (int i = 0; i < c1->count; i++)
+        for (int j = 0; j < c1->arity; j++)
+            if (c1->items[i].vec[j] != c2->items[i].vec[j]) return false;
+    return true;
+}
+
+// --- Unifiers ---
+int get_constants(Hypergraph* g, char res[][MAX_NAME]) {
+    int cnt = 0;
+    for (int i = 0; i < g->edge_cnt; i++)
+        for (int j = 0; j < g->edges[i].arity; j++)
+            if (!is_var(g->edges[i].args[j])) {
+                bool found = false;
+                for (int k = 0; k < cnt; k++)
+                    if (strcmp(res[k], g->edges[i].args[j]) == 0) { found = true; break; }
+                if (!found && cnt < MAX_ARGS) copy_str(res[cnt++], g->edges[i].args[j]);
+            }
+    return cnt;
+}
+
+int get_variables(Hypergraph* g, char res[][MAX_NAME]) {
+    int cnt = 0;
+    for (int i = 0; i < g->edge_cnt; i++)
+        for (int j = 0; j < g->edges[i].arity; j++)
+            if (is_var(g->edges[i].args[j])) {
+                bool found = false;
+                for (int k = 0; k < cnt; k++)
+                    if (strcmp(res[k], g->edges[i].args[j]) == 0) { found = true; break; }
+                if (!found && cnt < MAX_ARGS) copy_str(res[cnt++], g->edges[i].args[j]);
+            }
+    return cnt;
+}
+
