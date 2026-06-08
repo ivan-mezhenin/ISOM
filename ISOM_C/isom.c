@@ -54,3 +54,59 @@ Hypergraph* parse_hg(const char* str) {
     return g;
 }
 
+void free_hg(Hypergraph* g) { if (g) free(g); }
+
+void print_hg(Hypergraph* g) {
+    if (!g) return;
+    for (int i = 0; i < g->edge_cnt; i++) {
+        Hyperedge* e = &g->edges[i];
+        printf("%s(", e->pred);
+        for (int j = 0; j < e->arity; j++) {
+            printf("%s", e->args[j]);
+            if (j < e->arity - 1) printf(",");
+        }
+        printf(") ");
+    }
+    printf("\n");
+}
+
+// --- Characteristics ---
+typedef struct {
+    char name[MAX_NAME];
+    int vec[MAX_ARGS];
+} ArgChar;
+
+typedef struct {
+    ArgChar* items;
+    int count;
+    int arity;
+} GraphChar;
+
+GraphChar* calc_char(Hypergraph* g) {
+    char uniq[MAX_ARGS][MAX_NAME] = {{0}};
+    int ucnt = 0;
+    
+    for (int i = 0; i < g->edge_cnt; i++)
+        for (int j = 0; j < g->edges[i].arity; j++) {
+            bool found = false;
+            for (int k = 0; k < ucnt; k++)
+                if (strcmp(uniq[k], g->edges[i].args[j]) == 0) { found = true; break; }
+            if (!found && ucnt < MAX_ARGS) copy_str(uniq[ucnt++], g->edges[i].args[j]);
+        }
+    
+    GraphChar* gc = (GraphChar*)malloc(sizeof(GraphChar));
+    gc->count = ucnt;
+    gc->arity = g->arity;
+    gc->items = (ArgChar*)calloc(ucnt, sizeof(ArgChar));
+    
+    for (int i = 0; i < ucnt; i++) {
+        copy_str(gc->items[i].name, uniq[i]);
+        for (int j = 0; j < g->arity; j++) gc->items[i].vec[j] = 0;
+        for (int e = 0; e < g->edge_cnt; e++)
+            for (int a = 0; a < g->edges[e].arity; a++)
+                if (strcmp(g->edges[e].args[a], uniq[i]) == 0)
+                    gc->items[i].vec[a]++;
+    }
+    return gc;
+}
+
