@@ -363,7 +363,7 @@ static bool chars_match(const char* var, GraphChar* c1, Unifier* lambda1,
 
 // --- Find λ2 (stop at first) — iterative backtrack ---
 bool search_lambda2(Hypergraph* H, Hypergraph* G2,
-                    Unifier* cur, int depth,
+                    Unifier* cur,
                     char vars[][MAX_NAME], int var_cnt,
                     char consts[][MAX_NAME], int const_cnt,
                     bool used_consts[],
@@ -459,7 +459,7 @@ Unifier* check_iso(Hypergraph* g1, Hypergraph* g2) {
     bool* used_args = (bool*)calloc(MAX_UNIQUE, sizeof(bool));
     if (!used_args) { free(vars); free(all_args); free_hg(H); free_char(c1); free_char(c2); return NULL; }
     
-    if (!search_lambda2(H, g2, &lambda2, 0, vars, var_cnt, all_args, all_cnt, used_args,
+    if (!search_lambda2(H, g2, &lambda2, vars, var_cnt, all_args, all_cnt, used_args,
                         c1, c2, &lambda1)) {
         free(vars); free(all_args); free(used_args);
         uni_clear(&lambda1); uni_clear(&lambda2);
