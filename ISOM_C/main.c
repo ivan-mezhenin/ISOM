@@ -23,7 +23,7 @@ void test(const char* name, const char* g1_str, const char* g2_str) {
     if (uni) {
         printf("Unifier (one of possible):\n");
         print_uni(uni);
-        free(uni);
+        uni_free(uni);
     }
     printf("\n");
     
@@ -31,11 +31,34 @@ void test(const char* name, const char* g1_str, const char* g2_str) {
     free_hg(G2);
 }
 
+char* read_file(const char* path) {
+    FILE* f = fopen(path, "r");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char* buf = (char*)malloc(len + 1);
+    if (!buf) { fclose(f); return NULL; }
+    size_t n = fread(buf, 1, len, f);
+    buf[n] = '\0';
+    fclose(f);
+    return buf;
+}
+
 int main(int argc, char* argv[]) {
     if (argc == 3) {
-        // CLI mode: ./isom "g1_str" "g2_str"
-        Hypergraph* G1 = parse_hg(argv[1]);
-        Hypergraph* G2 = parse_hg(argv[2]);
+        char *s1, *s2;
+        if (argv[1][0] == '@') {
+            s1 = read_file(argv[1] + 1);
+            s2 = read_file(argv[2] + 1);
+            if (!s1 || !s2) { fprintf(stderr, "File read error\n"); free(s1); free(s2); return 1; }
+        } else {
+            s1 = strdup(argv[1]);
+            s2 = strdup(argv[2]);
+        }
+        Hypergraph* G1 = parse_hg(s1);
+        Hypergraph* G2 = parse_hg(s2);
+        free(s1); free(s2);
         if (!G1 || !G2) {
             fprintf(stderr, "Parse error\n");
             free_hg(G1); free_hg(G2);
@@ -46,7 +69,7 @@ int main(int argc, char* argv[]) {
         if (uni) {
             for (int i = 0; i < uni->cnt; i++)
                 printf("%s -> %s\n", uni->subs[i].var, uni->subs[i].val);
-            free(uni);
+            uni_free(uni);
         }
         free_hg(G1); free_hg(G2);
         return 0;

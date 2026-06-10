@@ -8,7 +8,8 @@
 
 #define MAX_NAME 50
 #define MAX_ARGS 20
-#define MAX_EDGES 100
+#define MAX_EDGES 10000
+#define MAX_UNIQUE 50000
 
 typedef struct {
     char pred[MAX_NAME];
@@ -28,8 +29,9 @@ typedef struct {
 } Sub;
 
 typedef struct {
-    Sub subs[MAX_ARGS * 2];
+    Sub* subs;
     int cnt;
+    int cap;
 } Unifier;
 
 // Функции
@@ -39,5 +41,6 @@ void print_hg(Hypergraph* g);
 
 // Главная функция: возвращает ОДИН унификатор (или NULL, если не изоморфны)
 Unifier* check_iso(Hypergraph* g1, Hypergraph* g2);
+void uni_free(Unifier* u);
 
 #endif
