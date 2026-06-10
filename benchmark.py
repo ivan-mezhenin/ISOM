@@ -41,7 +41,7 @@ TESTS = [
 ]
 
 C_DIR = os.path.join(os.path.dirname(__file__), "ISOM_C")
-PY_DIR = os.path.join(os.path.dirname(__file__), "ISOM")
+PY_DIR = os.path.join(os.path.dirname(__file__), "ISOM_PYTHON")
 C_BIN = os.path.join(C_DIR, "isom")
 PY_MAIN = os.path.join(PY_DIR, "main.py")
 
