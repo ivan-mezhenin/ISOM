@@ -89,8 +89,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     
-    printf("Hypergraph Isomorphism Checker\n");
-    printf("(PDF: Ob izomorfizme gipergrafov otnosheniy)\n\n");
     
     // Test 1: Simple isomorphism
     test("Test 1: Simple Isomorphic", 

@@ -122,13 +122,16 @@ Hypergraph* parse_hypergraph(const char* string) {
         while (*ptr == ' ') {
             ptr++;
         }
+
         if (*ptr == '&') {
             ptr++;
         } 
+
         else {
             break;
         }
     }
+    
     return graph;
 }
 
@@ -312,43 +315,25 @@ int get_variables(Hypergraph* graph, char result[][MAX_NAME]) {
 }
 
 // Build template H from G1, returns lambda1: const_G1 -> x_i
-// Variables in G1 are kept as-is (they become part of H)
 Hypergraph* build_template(Hypergraph* graph1, Unifier* lambda1) {
     Hypergraph* template_graph = (Hypergraph*)calloc(1, sizeof(Hypergraph));
     template_graph->edge_count = graph1->edge_count;
     template_graph->max_arity = graph1->max_arity;
     lambda1->count = 0;
 
-    // Collect constants and assign them new variable names
     char (*consts)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
     if (!consts) {
         return NULL;
     }
-    int const_count = 0;
 
-    for (int i = 0; i < graph1->edge_count; i++) {
-        for (int j = 0; j < graph1->edges[i].arity; j++) {
-            char* arg = graph1->edges[i].args[j];
-            if (!is_variable(arg)) {
-                bool found = false;
-                for (int k = 0; k < const_count; k++) {
-                    if (strcmp(consts[k], arg) == 0) {
-                        found = true;
-                        break;
-                    }
-                }
+    int const_count = get_constants(graph1, consts);
 
-                if (!found && const_count < MAX_UNIQUE) {
-                    copy_string(consts[const_count], arg);
-                    char var_name[MAX_NAME];
-                    sprintf(var_name, "x%d", const_count + 1);
-                    copy_string(lambda1->subs[lambda1->count].from, consts[const_count]);
-                    copy_string(lambda1->subs[lambda1->count].to, var_name);
-                    lambda1->count++;
-                    const_count++;
-                }
-            }
-        }
+    for (int i = 0; i < const_count; i++) {
+        char var_name[MAX_NAME];
+        snprintf(var_name, sizeof(var_name), "x%d", i + 1);
+        copy_string(lambda1->subs[i].from, consts[i]);
+        copy_string(lambda1->subs[i].to, var_name);
+        lambda1->count++;
     }
 
     // Build H: replace constants with their x_i, keep variables as-is
@@ -646,80 +631,71 @@ int get_all_arguments(Hypergraph* graph, char result[][MAX_NAME]) {
 
 // --- Main function: returns unifier or NULL ---
 Unifier* check_isomorphism(Hypergraph* graph1, Hypergraph* graph2) {
-    // 1. Check characteristics
-    GraphCharacteristics* chars1 = calculate_characteristics(graph1);
-    GraphCharacteristics* chars2 = calculate_characteristics(graph2);
+    GraphCharacteristics* chars1 = NULL;
+    GraphCharacteristics* chars2 = NULL;
+    Hypergraph* template_graph = NULL;
+    char (*variables)[MAX_NAME] = NULL;
+    char (*all_arguments)[MAX_NAME] = NULL;
+    bool* used_arguments = NULL;
+    Unifier lambda1 = {0};
+    Unifier lambda2 = {0};
+    Unifier* result = NULL;
+    int var_count = 0;
+    int all_count = 0;
 
+    chars1 = calculate_characteristics(graph1);
+    chars2 = calculate_characteristics(graph2);
+    if (!chars1 || !chars2) {
+        goto cleanup;
+    }
     if (!compare_characteristics(chars1, chars2)) {
-        free_characteristics(chars1);
-        free_characteristics(chars2);
-        return NULL;
+        goto cleanup;
     }
 
-    // 2. Build template H and lambda1: constants of G1 -> variables x_i
-    Unifier lambda1;
     unifier_init(&lambda1);
-    Hypergraph* template_graph = build_template(graph1, &lambda1);
+    template_graph = build_template(graph1, &lambda1);
+    if (!template_graph) {
+        goto cleanup;
+    }
 
-    // 3. Get variables in H and ALL arguments in G2 (both vars and constants)
-    char (*variables)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
+    variables = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
     if (!variables) {
-        free_hypergraph(template_graph);
-        free_characteristics(chars1);
-        free_characteristics(chars2);
-        return NULL;
+        goto cleanup;
     }
+    var_count = get_variables(template_graph, variables);
 
-    int var_count = get_variables(template_graph, variables);
-
-    char (*all_arguments)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
+    all_arguments = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
     if (!all_arguments) {
-        free(variables);
-        free_hypergraph(template_graph);
-        free_characteristics(chars1);
-        free_characteristics(chars2);
-        return NULL;
+        goto cleanup;
     }
-    
-    int all_count = get_all_arguments(graph2, all_arguments);
+    all_count = get_all_arguments(graph2, all_arguments);
 
-    // 4. Search for lambda2 with characteristic grouping (Kosovskaya's algorithm)
-    Unifier lambda2;
     unifier_init(&lambda2);
-    bool* used_arguments = (bool*)calloc(MAX_UNIQUE, sizeof(bool));
+    used_arguments = (bool*)calloc(MAX_UNIQUE, sizeof(bool));
     if (!used_arguments) {
-        free(variables);
-        free(all_arguments);
-        free_hypergraph(template_graph);
-        free_characteristics(chars1);
-        free_characteristics(chars2);
-        return NULL;
+        goto cleanup;
     }
 
     if (!search_lambda2(template_graph, graph2, &lambda2, variables, var_count,
                         all_arguments, all_count, used_arguments,
                         chars1, chars2, &lambda1)) {
-        free(variables);
-        free(all_arguments);
-        free(used_arguments);
-        unifier_clear(&lambda1);
-        unifier_clear(&lambda2);
-        free_hypergraph(template_graph);
-        free_characteristics(chars1);
-        free_characteristics(chars2);
-        return NULL;
+        goto cleanup;
     }
 
-    Unifier* result = compose_unifiers(&lambda1, &lambda2);
+    result = compose_unifiers(&lambda1, &lambda2);
 
+cleanup:
     free(variables);
     free(all_arguments);
     free(used_arguments);
-    unifier_clear(&lambda1);
-    unifier_clear(&lambda2);
+    if (lambda1.subs) {
+        unifier_clear(&lambda1);
+    }
+    if (lambda2.subs) {
+        unifier_clear(&lambda2);
+    }
     free_hypergraph(template_graph);
     free_characteristics(chars1);
     free_characteristics(chars2);
-
     return result;
 }
