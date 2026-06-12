@@ -2,13 +2,6 @@
 #include <stdlib.h>
 #include "isom.h"
 
-void print_unifier(Unifier* unifier) {
-    if (!unifier || unifier->count == 0) { printf("  (none)\n"); return; }
-    for (int i = 0; i < unifier->count; i++) {
-        printf("  %s -> %s\n", unifier->subs[i].from, unifier->subs[i].to);
-    }
-}
-
 void test(const char* name, const char* graph1_str, const char* graph2_str) {
     printf("=== %s ===\n", name);
     Hypergraph* graph1 = parse_hypergraph(graph1_str);
@@ -32,15 +25,36 @@ void test(const char* name, const char* graph1_str, const char* graph2_str) {
 }
 
 char* read_file(const char* path) {
-    FILE* f = fopen(path, "r");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        return NULL;
+    }
+
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+
     long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char* buf = (char*)malloc(len + 1);
-    if (!buf) { fclose(f); return NULL; }
-    size_t n = fread(buf, 1, len, f);
+    if (len < 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    char* buf = (char*)malloc((size_t)len + 1);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+
+    size_t n = fread(buf, 1, (size_t)len, f);
     buf[n] = '\0';
+
     fclose(f);
     return buf;
 }
