@@ -22,7 +22,7 @@ typedef struct {
 typedef struct {
     Hyperedge edges[MAX_EDGES];
     int edge_count;
-    int arity;
+    int max_arity;
 } Hypergraph;
 
 // A substitution pair: replace `from` with `to`

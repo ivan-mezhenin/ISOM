@@ -113,8 +113,8 @@ Hypergraph* parse_hypergraph(const char* string) {
             token = strtok(NULL, ",");
         }
 
-        if (graph->edge_count == 0) {
-            graph->arity = edge->arity;
+        if (edge->arity > graph->max_arity) {
+            graph->max_arity = edge->arity;
         }
         graph->edge_count++;
         ptr++;
@@ -194,12 +194,12 @@ GraphCharacteristics* calculate_characteristics(Hypergraph* graph) {
 
     GraphCharacteristics* graph_char = (GraphCharacteristics*)malloc(sizeof(GraphCharacteristics));
     graph_char->count = unique_count;
-    graph_char->arity = graph->arity;
+    graph_char->arity = graph->max_arity;
     graph_char->items = (ArgCharacteristic*)calloc(unique_count, sizeof(ArgCharacteristic));
 
     for (int i = 0; i < unique_count; i++) {
         copy_string(graph_char->items[i].name, unique[i]);
-        for (int j = 0; j < graph->arity; j++) {
+        for (int j = 0; j < graph->max_arity; j++) {
             graph_char->items[i].vector[j] = 0;
         }
 
@@ -316,7 +316,7 @@ int get_variables(Hypergraph* graph, char result[][MAX_NAME]) {
 Hypergraph* build_template(Hypergraph* graph1, Unifier* lambda1) {
     Hypergraph* template_graph = (Hypergraph*)calloc(1, sizeof(Hypergraph));
     template_graph->edge_count = graph1->edge_count;
-    template_graph->arity = graph1->arity;
+    template_graph->max_arity = graph1->max_arity;
     lambda1->count = 0;
 
     // Collect constants and assign them new variable names
@@ -378,7 +378,7 @@ Hypergraph* build_template(Hypergraph* graph1, Unifier* lambda1) {
 Hypergraph* apply_unifier(Hypergraph* graph, Unifier* unifier) {
     Hypergraph* result = (Hypergraph*)calloc(1, sizeof(Hypergraph));
     result->edge_count = graph->edge_count;
-    result->arity = graph->arity;
+    result->max_arity = graph->max_arity;
 
     for (int i = 0; i < graph->edge_count; i++) {
         copy_string(result->edges[i].pred, graph->edges[i].pred);
