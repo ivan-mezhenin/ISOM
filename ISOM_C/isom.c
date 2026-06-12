@@ -1,93 +1,93 @@
 #include "isom.h"
 #include <ctype.h>
 
-void copy_str(char* d, const char* s) {
-    strncpy(d, s, MAX_NAME - 1);
-    d[MAX_NAME - 1] = '\0';
+void copy_string(char* destination, const char* source) {
+    strncpy(destination, source, MAX_NAME - 1);
+    destination[MAX_NAME - 1] = '\0';
 }
 
-bool is_var(const char* s) {
-    return s && s[0] == 'x';
+bool is_variable(const char* string) {
+    return string && string[0] == 'x';
 }
 
-Unifier* uni_alloc(void) {
-    Unifier* u = (Unifier*)calloc(1, sizeof(Unifier));
-    if (!u) return NULL;
-    u->subs = (Sub*)calloc(MAX_UNIQUE, sizeof(Sub));
-    if (!u->subs) { free(u); return NULL; }
-    u->cnt = 0;
-    u->cap = MAX_UNIQUE;
-    return u;
+Unifier* unifier_alloc(void) {
+    Unifier* unifier = (Unifier*)calloc(1, sizeof(Unifier));
+    if (!unifier) return NULL;
+    unifier->subs = (Sub*)calloc(MAX_UNIQUE, sizeof(Sub));
+    if (!unifier->subs) { free(unifier); return NULL; }
+    unifier->count = 0;
+    unifier->capacity = MAX_UNIQUE;
+    return unifier;
 }
 
-void uni_init(Unifier* u) {
-    u->subs = (Sub*)calloc(MAX_UNIQUE, sizeof(Sub));
-    u->cnt = 0;
-    u->cap = MAX_UNIQUE;
+void unifier_init(Unifier* unifier) {
+    unifier->subs = (Sub*)calloc(MAX_UNIQUE, sizeof(Sub));
+    unifier->count = 0;
+    unifier->capacity = MAX_UNIQUE;
 }
 
-void uni_clear(Unifier* u) {
-    if (u->subs) { free(u->subs); u->subs = NULL; }
+void unifier_clear(Unifier* unifier) {
+    if (unifier->subs) { free(unifier->subs); unifier->subs = NULL; }
 }
 
-void uni_free(Unifier* u) {
-    if (u) { if (u->subs) free(u->subs); free(u); }
+void unifier_free(Unifier* unifier) {
+    if (unifier) { if (unifier->subs) free(unifier->subs); free(unifier); }
 }
 
 // --- Parsing ---
-Hypergraph* parse_hg(const char* str) {
-    Hypergraph* g = (Hypergraph*)calloc(1, sizeof(Hypergraph));
-    const char* p = str;
+Hypergraph* parse_hypergraph(const char* string) {
+    Hypergraph* graph = (Hypergraph*)calloc(1, sizeof(Hypergraph));
+    const char* ptr = string;
     
-    while (*p && g->edge_cnt < MAX_EDGES) {
-        while (*p == ' ') p++;
-        const char* pred_start = p;
-        while (*p && *p != '(') p++;
-        if (!*p) break;
+    while (*ptr && graph->edge_count < MAX_EDGES) {
+        while (*ptr == ' ') ptr++;
+        const char* pred_start = ptr;
+        while (*ptr && *ptr != '(') ptr++;
+        if (!*ptr) break;
         
-        Hyperedge* e = &g->edges[g->edge_cnt];
-        int plen = p - pred_start;
-        if (plen >= MAX_NAME) plen = MAX_NAME - 1;
-        strncpy(e->pred, pred_start, plen);
-        e->pred[plen] = '\0';
+        Hyperedge* edge = &graph->edges[graph->edge_count];
+        int pred_len = ptr - pred_start;
+        if (pred_len >= MAX_NAME) pred_len = MAX_NAME - 1;
+        strncpy(edge->pred, pred_start, pred_len);
+        edge->pred[pred_len] = '\0';
         
-        p++;
-        const char* args_start = p;
-        while (*p && *p != ')') p++;
-        if (*p != ')') { free(g); return NULL; }
+        ptr++;
+        const char* args_start = ptr;
+        while (*ptr && *ptr != ')') ptr++;
+        if (*ptr != ')') { free(graph); return NULL; }
         
         char args_str[1024] = {0};
-        strncpy(args_str, args_start, p - args_start);
+        strncpy(args_str, args_start, ptr - args_start);
         
-        e->arity = 0;
-        char* tok = strtok(args_str, ",");
-        while (tok && e->arity < MAX_ARGS) {
-            copy_str(e->args[e->arity], tok);
-            e->arity++;
-            tok = strtok(NULL, ",");
+        edge->arity = 0;
+        char* token = strtok(args_str, ",");
+        while (token && edge->arity < MAX_ARGS) {
+            copy_string(edge->args[edge->arity], token);
+            edge->arity++;
+            token = strtok(NULL, ",");
         }
         
-        if (g->edge_cnt == 0) g->arity = e->arity;
-        g->edge_cnt++;
-        p++;
+        if (graph->edge_count == 0) graph->arity = edge->arity;
+        graph->edge_count++;
+        ptr++;
         
-        while (*p == ' ') p++;
-        if (*p == '&') p++;
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '&') ptr++;
         else break;
     }
-    return g;
+    return graph;
 }
 
-void free_hg(Hypergraph* g) { if (g) free(g); }
+void free_hypergraph(Hypergraph* graph) { if (graph) free(graph); }
 
-void print_hg(Hypergraph* g) {
-    if (!g) return;
-    for (int i = 0; i < g->edge_cnt; i++) {
-        Hyperedge* e = &g->edges[i];
-        printf("%s(", e->pred);
-        for (int j = 0; j < e->arity; j++) {
-            printf("%s", e->args[j]);
-            if (j < e->arity - 1) printf(",");
+void print_hypergraph(Hypergraph* graph) {
+    if (!graph) return;
+    for (int i = 0; i < graph->edge_count; i++) {
+        Hyperedge* edge = &graph->edges[i];
+        printf("%s(", edge->pred);
+        for (int j = 0; j < edge->arity; j++) {
+            printf("%s", edge->args[j]);
+            if (j < edge->arity - 1) printf(",");
         }
         printf(") ");
     }
@@ -97,149 +97,146 @@ void print_hg(Hypergraph* g) {
 // --- Characteristics ---
 typedef struct {
     char name[MAX_NAME];
-    int vec[MAX_ARGS];
-} ArgChar;
+    int vector[MAX_ARGS];
+} ArgCharacteristic;
 
 typedef struct {
-    ArgChar* items;
+    ArgCharacteristic* items;
     int count;
     int arity;
-} GraphChar;
+} GraphCharacteristics;
 
-GraphChar* calc_char(Hypergraph* g) {
-    char (*uniq)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
-    if (!uniq) return NULL;
-    int ucnt = 0;
+GraphCharacteristics* calculate_characteristics(Hypergraph* graph) {
+    char (*unique)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
+    if (!unique) return NULL;
+    int unique_count = 0;
     
-    for (int i = 0; i < g->edge_cnt; i++)
-        for (int j = 0; j < g->edges[i].arity; j++) {
+    for (int i = 0; i < graph->edge_count; i++)
+        for (int j = 0; j < graph->edges[i].arity; j++) {
             bool found = false;
-            for (int k = 0; k < ucnt; k++)
-                if (strcmp(uniq[k], g->edges[i].args[j]) == 0) { found = true; break; }
-            if (!found && ucnt < MAX_UNIQUE) copy_str(uniq[ucnt++], g->edges[i].args[j]);
+            for (int k = 0; k < unique_count; k++)
+                if (strcmp(unique[k], graph->edges[i].args[j]) == 0) { found = true; break; }
+            if (!found && unique_count < MAX_UNIQUE) copy_string(unique[unique_count++], graph->edges[i].args[j]);
         }
     
-    GraphChar* gc = (GraphChar*)malloc(sizeof(GraphChar));
-    gc->count = ucnt;
-    gc->arity = g->arity;
-    gc->items = (ArgChar*)calloc(ucnt, sizeof(ArgChar));
+    GraphCharacteristics* graph_char = (GraphCharacteristics*)malloc(sizeof(GraphCharacteristics));
+    graph_char->count = unique_count;
+    graph_char->arity = graph->arity;
+    graph_char->items = (ArgCharacteristic*)calloc(unique_count, sizeof(ArgCharacteristic));
     
-    for (int i = 0; i < ucnt; i++) {
-        copy_str(gc->items[i].name, uniq[i]);
-        for (int j = 0; j < g->arity; j++) gc->items[i].vec[j] = 0;
-        for (int e = 0; e < g->edge_cnt; e++)
-            for (int a = 0; a < g->edges[e].arity; a++)
-                if (strcmp(g->edges[e].args[a], uniq[i]) == 0)
-                    gc->items[i].vec[a]++;
+    for (int i = 0; i < unique_count; i++) {
+        copy_string(graph_char->items[i].name, unique[i]);
+        for (int j = 0; j < graph->arity; j++) graph_char->items[i].vector[j] = 0;
+        for (int edge_i = 0; edge_i < graph->edge_count; edge_i++)
+            for (int a = 0; a < graph->edges[edge_i].arity; a++)
+                if (strcmp(graph->edges[edge_i].args[a], unique[i]) == 0)
+                    graph_char->items[i].vector[a]++;
     }
-    free(uniq);
-    return gc;
+    free(unique);
+    return graph_char;
 }
 
-void free_char(GraphChar* gc) {
-    if (gc) { if (gc->items) free(gc->items); free(gc); }
+void free_characteristics(GraphCharacteristics* graph_char) {
+    if (graph_char) { if (graph_char->items) free(graph_char->items); free(graph_char); }
 }
 
-int cmp_argchar(const void* a, const void* b) {
-    ArgChar* ac1 = (ArgChar*)a;
-    ArgChar* ac2 = (ArgChar*)b;
+int compare_arg_characteristic(const void* a, const void* b) {
+    ArgCharacteristic* arg_char1 = (ArgCharacteristic*)a;
+    ArgCharacteristic* arg_char2 = (ArgCharacteristic*)b;
     for (int i = 0; i < MAX_ARGS; i++) {
-        if (ac1->vec[i] < ac2->vec[i]) return -1;
-        if (ac1->vec[i] > ac2->vec[i]) return 1;
+        if (arg_char1->vector[i] < arg_char2->vector[i]) return -1;
+        if (arg_char1->vector[i] > arg_char2->vector[i]) return 1;
     }
-    return strcmp(ac1->name, ac2->name);
+    return strcmp(arg_char1->name, arg_char2->name);
 }
 
-void sort_char(GraphChar* gc) {
-    qsort(gc->items, gc->count, sizeof(ArgChar), cmp_argchar);
+void sort_characteristics(GraphCharacteristics* graph_char) {
+    qsort(graph_char->items, graph_char->count, sizeof(ArgCharacteristic), compare_arg_characteristic);
 }
 
-bool cmp_chars(GraphChar* c1, GraphChar* c2) {
-    if (c1->count != c2->count || c1->arity != c2->arity) return false;
-    sort_char(c1);
-    sort_char(c2);
-    for (int i = 0; i < c1->count; i++)
-        for (int j = 0; j < c1->arity; j++)
-            if (c1->items[i].vec[j] != c2->items[i].vec[j]) return false;
+bool compare_characteristics(GraphCharacteristics* chars1, GraphCharacteristics* chars2) {
+    if (chars1->count != chars2->count || chars1->arity != chars2->arity) return false;
+    sort_characteristics(chars1);
+    sort_characteristics(chars2);
+    for (int i = 0; i < chars1->count; i++)
+        for (int j = 0; j < chars1->arity; j++)
+            if (chars1->items[i].vector[j] != chars2->items[i].vector[j]) return false;
     return true;
 }
 
-// --- Unifiers ---
-int get_constants(Hypergraph* g, char res[][MAX_NAME]) {
-    int cnt = 0;
-    for (int i = 0; i < g->edge_cnt; i++)
-        for (int j = 0; j < g->edges[i].arity; j++)
-            if (!is_var(g->edges[i].args[j])) {
+// --- Constants and variables ---
+int get_constants(Hypergraph* graph, char result[][MAX_NAME]) {
+    int count = 0;
+    for (int i = 0; i < graph->edge_count; i++)
+        for (int j = 0; j < graph->edges[i].arity; j++)
+            if (!is_variable(graph->edges[i].args[j])) {
                 bool found = false;
-                for (int k = 0; k < cnt; k++)
-                    if (strcmp(res[k], g->edges[i].args[j]) == 0) { found = true; break; }
-                if (!found && cnt < MAX_UNIQUE) copy_str(res[cnt++], g->edges[i].args[j]);
+                for (int k = 0; k < count; k++)
+                    if (strcmp(result[k], graph->edges[i].args[j]) == 0) { found = true; break; }
+                if (!found && count < MAX_UNIQUE) copy_string(result[count++], graph->edges[i].args[j]);
             }
-    return cnt;
+    return count;
 }
 
-int get_variables(Hypergraph* g, char res[][MAX_NAME]) {
-    int cnt = 0;
-    for (int i = 0; i < g->edge_cnt; i++)
-        for (int j = 0; j < g->edges[i].arity; j++)
-            if (is_var(g->edges[i].args[j])) {
+int get_variables(Hypergraph* graph, char result[][MAX_NAME]) {
+    int count = 0;
+    for (int i = 0; i < graph->edge_count; i++)
+        for (int j = 0; j < graph->edges[i].arity; j++)
+            if (is_variable(graph->edges[i].args[j])) {
                 bool found = false;
-                for (int k = 0; k < cnt; k++)
-                    if (strcmp(res[k], g->edges[i].args[j]) == 0) { found = true; break; }
-                if (!found && cnt < MAX_UNIQUE) copy_str(res[cnt++], g->edges[i].args[j]);
+                for (int k = 0; k < count; k++)
+                    if (strcmp(result[k], graph->edges[i].args[j]) == 0) { found = true; break; }
+                if (!found && count < MAX_UNIQUE) copy_string(result[count++], graph->edges[i].args[j]);
             }
-    return cnt;
+    return count;
 }
 
-// Build template H from G1, returns λ1: const_G1 -> x_i
+// Build template H from G1, returns lambda1: const_G1 -> x_i
 // Variables in G1 are kept as-is (they become part of H)
-Hypergraph* build_template(Hypergraph* g1, Unifier* lambda1) {
-    Hypergraph* H = (Hypergraph*)calloc(1, sizeof(Hypergraph));
-    H->edge_cnt = g1->edge_cnt;
-    H->arity = g1->arity;
-    lambda1->cnt = 0;
+Hypergraph* build_template(Hypergraph* graph1, Unifier* lambda1) {
+    Hypergraph* template_graph = (Hypergraph*)calloc(1, sizeof(Hypergraph));
+    template_graph->edge_count = graph1->edge_count;
+    template_graph->arity = graph1->arity;
+    lambda1->count = 0;
     
     // Collect constants and assign them new variable names
     char (*consts)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
     if (!consts) return NULL;
-    int ccnt = 0;
+    int const_count = 0;
     
-    for (int i = 0; i < g1->edge_cnt; i++) {
-        for (int j = 0; j < g1->edges[i].arity; j++) {
-            char* arg = g1->edges[i].args[j];
-            if (!is_var(arg)) {  // It's a constant
+    for (int i = 0; i < graph1->edge_count; i++) {
+        for (int j = 0; j < graph1->edges[i].arity; j++) {
+            char* arg = graph1->edges[i].args[j];
+            if (!is_variable(arg)) {
                 bool found = false;
-                for (int k = 0; k < ccnt; k++) {
+                for (int k = 0; k < const_count; k++) {
                     if (strcmp(consts[k], arg) == 0) { found = true; break; }
                 }
-                if (!found && ccnt < MAX_UNIQUE) {
-                    copy_str(consts[ccnt], arg);
-                    // Create mapping: constant -> new variable x_i
-                    char vn[MAX_NAME];
-                    sprintf(vn, "x%d", ccnt + 1);
-                    copy_str(lambda1->subs[lambda1->cnt].var, consts[ccnt]);
-                    copy_str(lambda1->subs[lambda1->cnt].val, vn);
-                    lambda1->cnt++;
-                    ccnt++;
+                if (!found && const_count < MAX_UNIQUE) {
+                    copy_string(consts[const_count], arg);
+                    char var_name[MAX_NAME];
+                    sprintf(var_name, "x%d", const_count + 1);
+                    copy_string(lambda1->subs[lambda1->count].from, consts[const_count]);
+                    copy_string(lambda1->subs[lambda1->count].to, var_name);
+                    lambda1->count++;
+                    const_count++;
                 }
             }
         }
     }
     
     // Build H: replace constants with their x_i, keep variables as-is
-    for (int i = 0; i < g1->edge_cnt; i++) {
-        copy_str(H->edges[i].pred, g1->edges[i].pred);
-        H->edges[i].arity = g1->edges[i].arity;
-        for (int j = 0; j < g1->edges[i].arity; j++) {
-            char* arg = g1->edges[i].args[j];
-            if (is_var(arg)) {
-                // Variable in G1 stays as-is in H
-                copy_str(H->edges[i].args[j], arg);
+    for (int i = 0; i < graph1->edge_count; i++) {
+        copy_string(template_graph->edges[i].pred, graph1->edges[i].pred);
+        template_graph->edges[i].arity = graph1->edges[i].arity;
+        for (int j = 0; j < graph1->edges[i].arity; j++) {
+            char* arg = graph1->edges[i].args[j];
+            if (is_variable(arg)) {
+                copy_string(template_graph->edges[i].args[j], arg);
             } else {
-                // Constant: replace with its variable
-                for (int k = 0; k < lambda1->cnt; k++) {
-                    if (strcmp(arg, lambda1->subs[k].var) == 0) {
-                        copy_str(H->edges[i].args[j], lambda1->subs[k].val);
+                for (int k = 0; k < lambda1->count; k++) {
+                    if (strcmp(arg, lambda1->subs[k].from) == 0) {
+                        copy_string(template_graph->edges[i].args[j], lambda1->subs[k].to);
                         break;
                     }
                 }
@@ -247,81 +244,81 @@ Hypergraph* build_template(Hypergraph* g1, Unifier* lambda1) {
         }
     }
     free(consts);
-    return H;
+    return template_graph;
 }
 
-Hypergraph* apply_uni(Hypergraph* g, Unifier* u) {
-    Hypergraph* res = (Hypergraph*)calloc(1, sizeof(Hypergraph));
-    res->edge_cnt = g->edge_cnt;
-    res->arity = g->arity;
+Hypergraph* apply_unifier(Hypergraph* graph, Unifier* unifier) {
+    Hypergraph* result = (Hypergraph*)calloc(1, sizeof(Hypergraph));
+    result->edge_count = graph->edge_count;
+    result->arity = graph->arity;
     
-    for (int i = 0; i < g->edge_cnt; i++) {
-        copy_str(res->edges[i].pred, g->edges[i].pred);
-        res->edges[i].arity = g->edges[i].arity;
-        for (int j = 0; j < g->edges[i].arity; j++) {
+    for (int i = 0; i < graph->edge_count; i++) {
+        copy_string(result->edges[i].pred, graph->edges[i].pred);
+        result->edges[i].arity = graph->edges[i].arity;
+        for (int j = 0; j < graph->edges[i].arity; j++) {
             bool found = false;
-            for (int k = 0; k < u->cnt; k++)
-                if (strcmp(g->edges[i].args[j], u->subs[k].var) == 0) {
-                    copy_str(res->edges[i].args[j], u->subs[k].val);
+            for (int k = 0; k < unifier->count; k++)
+                if (strcmp(graph->edges[i].args[j], unifier->subs[k].from) == 0) {
+                    copy_string(result->edges[i].args[j], unifier->subs[k].to);
                     found = true;
                     break;
                 }
-            if (!found) copy_str(res->edges[i].args[j], g->edges[i].args[j]);
+            if (!found) copy_string(result->edges[i].args[j], graph->edges[i].args[j]);
         }
     }
-    return res;
+    return result;
 }
 
 // Compose u1 and u2: apply u2 to values of u1
-Unifier* compose(Unifier* u1, Unifier* u2) {
-    Unifier* res = uni_alloc();
-    if (!res) return NULL;
-    for (int i = 0; i < u1->cnt && res->cnt < MAX_UNIQUE; i++) {
-        copy_str(res->subs[res->cnt].var, u1->subs[i].var);
-        char fv[MAX_NAME] = {0};
-        copy_str(fv, u1->subs[i].val);
-        for (int j = 0; j < u2->cnt; j++)
-            if (strcmp(fv, u2->subs[j].var) == 0) {
-                copy_str(fv, u2->subs[j].val);
+Unifier* compose_unifiers(Unifier* unifier1, Unifier* unifier2) {
+    Unifier* result = unifier_alloc();
+    if (!result) return NULL;
+    for (int i = 0; i < unifier1->count && result->count < MAX_UNIQUE; i++) {
+        copy_string(result->subs[result->count].from, unifier1->subs[i].from);
+        char from_value[MAX_NAME] = {0};
+        copy_string(from_value, unifier1->subs[i].to);
+        for (int j = 0; j < unifier2->count; j++)
+            if (strcmp(from_value, unifier2->subs[j].from) == 0) {
+                copy_string(from_value, unifier2->subs[j].to);
                 break;
             }
-        copy_str(res->subs[res->cnt].val, fv);
-        res->cnt++;
+        copy_string(result->subs[result->count].to, from_value);
+        result->count++;
     }
-    return res;
+    return result;
 }
 
 // --- Isomorphism checks ---
-bool is_literal_iso(char a1[][MAX_NAME], char a2[][MAX_NAME], int arity) {
-    int i1 = 0, i2 = 0;
+bool is_literal_isomorphic(char args1[][MAX_NAME], char args2[][MAX_NAME], int arity) {
+    int count1 = 0, count2 = 0;
     
     for (int i = 0; i < arity; i++) {
         int id1 = -1;
-        for (int j = 0; j < i1; j++) if (strcmp(a1[i], a1[j]) == 0) { id1 = j; break; }
-        if (id1 == -1) { id1 = i1; i1++; }
+        for (int j = 0; j < count1; j++) if (strcmp(args1[i], args1[j]) == 0) { id1 = j; break; }
+        if (id1 == -1) { id1 = count1; count1++; }
         
         int id2 = -1;
-        for (int j = 0; j < i2; j++) if (strcmp(a2[i], a2[j]) == 0) { id2 = j; break; }
-        if (id2 == -1) { id2 = i2; i2++; }
+        for (int j = 0; j < count2; j++) if (strcmp(args2[i], args2[j]) == 0) { id2 = j; break; }
+        if (id2 == -1) { id2 = count2; count2++; }
         
         if (id1 != id2) return false;
     }
     return true;
 }
 
-bool edge_is_iso(Hyperedge* e1, Hyperedge* e2) {
-    if (e1->arity != e2->arity) return false;
-    if (strcmp(e1->pred, e2->pred) != 0) return false;
-    return is_literal_iso(e1->args, e2->args, e1->arity);
+bool edge_is_isomorphic(Hyperedge* edge1, Hyperedge* edge2) {
+    if (edge1->arity != edge2->arity) return false;
+    if (strcmp(edge1->pred, edge2->pred) != 0) return false;
+    return is_literal_isomorphic(edge1->args, edge2->args, edge1->arity);
 }
 
-bool hg_is_iso(Hypergraph* g1, Hypergraph* g2) {
-    if (g1->edge_cnt != g2->edge_cnt) return false;
+bool hypergraph_is_isomorphic(Hypergraph* graph1, Hypergraph* graph2) {
+    if (graph1->edge_count != graph2->edge_count) return false;
     bool used[MAX_EDGES] = {false};
-    for (int i = 0; i < g1->edge_cnt; i++) {
+    for (int i = 0; i < graph1->edge_count; i++) {
         bool found = false;
-        for (int j = 0; j < g2->edge_cnt; j++) {
-            if (!used[j] && edge_is_iso(&g1->edges[i], &g2->edges[j])) {
+        for (int j = 0; j < graph2->edge_count; j++) {
+            if (!used[j] && edge_is_isomorphic(&graph1->edges[i], &graph2->edges[j])) {
                 used[j] = true;
                 found = true;
                 break;
@@ -332,83 +329,81 @@ bool hg_is_iso(Hypergraph* g1, Hypergraph* g2) {
     return true;
 }
 
-// --- Characteristic-based pruning for λ2 search ---
-// Per-characteristic grouping from Kosovskaya's algorithm:
-// variables and constants with mismatching characteristics cannot be unified.
-static ArgChar* find_arg_char(GraphChar* gc, const char* name) {
-    for (int i = 0; i < gc->count; i++)
-        if (strcmp(gc->items[i].name, name) == 0)
-            return &gc->items[i];
+// --- Characteristic-based pruning for lambda2 search ---
+static ArgCharacteristic* find_arg_characteristic(GraphCharacteristics* graph_char, const char* name) {
+    for (int i = 0; i < graph_char->count; i++)
+        if (strcmp(graph_char->items[i].name, name) == 0)
+            return &graph_char->items[i];
     return NULL;
 }
 
-static ArgChar* find_var_char(const char* var, GraphChar* c1, Unifier* lambda1) {
-    ArgChar* ac = find_arg_char(c1, var);
-    if (ac) return ac;
-    for (int i = 0; i < lambda1->cnt; i++)
-        if (strcmp(lambda1->subs[i].val, var) == 0)
-            return find_arg_char(c1, lambda1->subs[i].var);
+static ArgCharacteristic* find_var_characteristic(const char* var, GraphCharacteristics* chars1, Unifier* lambda1) {
+    ArgCharacteristic* arg_char = find_arg_characteristic(chars1, var);
+    if (arg_char) return arg_char;
+    for (int i = 0; i < lambda1->count; i++)
+        if (strcmp(lambda1->subs[i].to, var) == 0)
+            return find_arg_characteristic(chars1, lambda1->subs[i].from);
     return NULL;
 }
 
-static bool chars_match(const char* var, GraphChar* c1, Unifier* lambda1,
-                        const char* con, GraphChar* c2) {
-    ArgChar* vc = find_var_char(var, c1, lambda1);
-    ArgChar* cc = find_arg_char(c2, con);
-    if (!vc || !cc) return true;
-    for (int i = 0; i < c1->arity; i++)
-        if (vc->vec[i] != cc->vec[i]) return false;
+static bool characteristics_match(const char* var, GraphCharacteristics* chars1, Unifier* lambda1,
+                         const char* con, GraphCharacteristics* chars2) {
+    ArgCharacteristic* var_char = find_var_characteristic(var, chars1, lambda1);
+    ArgCharacteristic* const_char = find_arg_characteristic(chars2, con);
+    if (!var_char || !const_char) return true;
+    for (int i = 0; i < chars1->arity; i++)
+        if (var_char->vector[i] != const_char->vector[i]) return false;
     return true;
 }
 
-// --- Find λ2 (stop at first) — iterative backtrack ---
-bool search_lambda2(Hypergraph* H, Hypergraph* G2,
-                    Unifier* cur,
-                    char vars[][MAX_NAME], int var_cnt,
-                    char consts[][MAX_NAME], int const_cnt,
-                    bool used_consts[],
-                    GraphChar* c1, GraphChar* c2, Unifier* lambda1) {
-    if (var_cnt == 0) {
-        Hypergraph* Hp = apply_uni(H, cur);
-        bool ok = Hp && hg_is_iso(Hp, G2);
-        if (Hp) free_hg(Hp);
+// --- Find lambda2 (stop at first) - iterative backtrack ---
+bool search_lambda2(Hypergraph* template_graph, Hypergraph* graph2,
+                    Unifier* current,
+                    char variables[][MAX_NAME], int var_count,
+                    char constants[][MAX_NAME], int const_count,
+                    bool used_constants[],
+                    GraphCharacteristics* chars1, GraphCharacteristics* chars2, Unifier* lambda1) {
+    if (var_count == 0) {
+        Hypergraph* applied_template = apply_unifier(template_graph, current);
+        bool ok = applied_template && hypergraph_is_isomorphic(applied_template, graph2);
+        if (applied_template) free_hypergraph(applied_template);
         return ok;
     }
     
-    int* pos = (int*)calloc(var_cnt, sizeof(int));
+    int* pos = (int*)calloc(var_count, sizeof(int));
     if (!pos) return false;
     
-    int d = 0;
-    while (d >= 0) {
-        if (d == var_cnt) {
-            Hypergraph* Hp = apply_uni(H, cur);
-            bool ok = Hp && hg_is_iso(Hp, G2);
-            if (Hp) free_hg(Hp);
+    int depth = 0;
+    while (depth >= 0) {
+        if (depth == var_count) {
+            Hypergraph* applied_template = apply_unifier(template_graph, current);
+            bool ok = applied_template && hypergraph_is_isomorphic(applied_template, graph2);
+            if (applied_template) free_hypergraph(applied_template);
             if (ok) { free(pos); return true; }
-            d--;
-            if (d >= 0) { used_consts[pos[d]] = false; cur->cnt--; pos[d]++; }
+            depth--;
+            if (depth >= 0) { used_constants[pos[depth]] = false; current->count--; pos[depth]++; }
             continue;
         }
         
-        if (pos[d] >= const_cnt) {
-            pos[d] = 0;
-            d--;
-            if (d >= 0) { used_consts[pos[d]] = false; cur->cnt--; pos[d]++; }
+        if (pos[depth] >= const_count) {
+            pos[depth] = 0;
+            depth--;
+            if (depth >= 0) { used_constants[pos[depth]] = false; current->count--; pos[depth]++; }
             continue;
         }
         
-        int i = pos[d];
-        if (used_consts[i] || !chars_match(vars[d], c1, lambda1, consts[i], c2)) {
-            pos[d]++;
+        int i = pos[depth];
+        if (used_constants[i] || !characteristics_match(variables[depth], chars1, lambda1, constants[i], chars2)) {
+            pos[depth]++;
             continue;
         }
         
-        copy_str(cur->subs[cur->cnt].var, vars[d]);
-        copy_str(cur->subs[cur->cnt].val, consts[i]);
-        cur->cnt++;
-        used_consts[i] = true;
-        d++;
-        if (d < var_cnt) pos[d] = 0;
+        copy_string(current->subs[current->count].from, variables[depth]);
+        copy_string(current->subs[current->count].to, constants[i]);
+        current->count++;
+        used_constants[i] = true;
+        depth++;
+        if (depth < var_count) pos[depth] = 0;
     }
     
     free(pos);
@@ -416,66 +411,66 @@ bool search_lambda2(Hypergraph* H, Hypergraph* G2,
 }
 
 // Get ALL unique arguments (variables and constants) from a hypergraph
-int get_all_args(Hypergraph* g, char res[][MAX_NAME]) {
-    int cnt = 0;
-    for (int i = 0; i < g->edge_cnt; i++)
-        for (int j = 0; j < g->edges[i].arity; j++) {
+int get_all_arguments(Hypergraph* graph, char result[][MAX_NAME]) {
+    int count = 0;
+    for (int i = 0; i < graph->edge_count; i++)
+        for (int j = 0; j < graph->edges[i].arity; j++) {
             bool found = false;
-            for (int k = 0; k < cnt; k++)
-                if (strcmp(res[k], g->edges[i].args[j]) == 0) { found = true; break; }
-            if (!found && cnt < MAX_UNIQUE) copy_str(res[cnt++], g->edges[i].args[j]);
+            for (int k = 0; k < count; k++)
+                if (strcmp(result[k], graph->edges[i].args[j]) == 0) { found = true; break; }
+            if (!found && count < MAX_UNIQUE) copy_string(result[count++], graph->edges[i].args[j]);
         }
-    return cnt;
+    return count;
 }
 
 // --- Main function: returns ONE unifier or NULL ---
-Unifier* check_iso(Hypergraph* g1, Hypergraph* g2) {
+Unifier* check_isomorphism(Hypergraph* graph1, Hypergraph* graph2) {
     // 1. Check characteristics (necessary condition from PDF)
-    GraphChar* c1 = calc_char(g1);
-    GraphChar* c2 = calc_char(g2);
+    GraphCharacteristics* chars1 = calculate_characteristics(graph1);
+    GraphCharacteristics* chars2 = calculate_characteristics(graph2);
     
-    if (!cmp_chars(c1, c2)) {
-        free_char(c1); free_char(c2);
+    if (!compare_characteristics(chars1, chars2)) {
+        free_characteristics(chars1); free_characteristics(chars2);
         return NULL;
     }
     
-    // 2. Build template H and λ1: constants of G1 -> variables x_i
+    // 2. Build template H and lambda1: constants of G1 -> variables x_i
     Unifier lambda1;
-    uni_init(&lambda1);
-    Hypergraph* H = build_template(g1, &lambda1);
+    unifier_init(&lambda1);
+    Hypergraph* template_graph = build_template(graph1, &lambda1);
     
     // 3. Get variables in H and ALL arguments in G2 (both vars and constants)
-    char (*vars)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
-    if (!vars) { free_hg(H); free_char(c1); free_char(c2); return NULL; }
-    int var_cnt = get_variables(H, vars);
+    char (*variables)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
+    if (!variables) { free_hypergraph(template_graph); free_characteristics(chars1); free_characteristics(chars2); return NULL; }
+    int var_count = get_variables(template_graph, variables);
     
-    char (*all_args)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
-    if (!all_args) { free(vars); free_hg(H); free_char(c1); free_char(c2); return NULL; }
-    int all_cnt = get_all_args(g2, all_args);
+    char (*all_arguments)[MAX_NAME] = (char(*)[MAX_NAME])calloc(MAX_UNIQUE, MAX_NAME);
+    if (!all_arguments) { free(variables); free_hypergraph(template_graph); free_characteristics(chars1); free_characteristics(chars2); return NULL; }
+    int all_count = get_all_arguments(graph2, all_arguments);
     
-    // 4. Search for λ2 with characteristic grouping (Kosovskaya's algorithm)
+    // 4. Search for lambda2 with characteristic grouping (Kosovskaya's algorithm)
     Unifier lambda2;
-    uni_init(&lambda2);
-    bool* used_args = (bool*)calloc(MAX_UNIQUE, sizeof(bool));
-    if (!used_args) { free(vars); free(all_args); free_hg(H); free_char(c1); free_char(c2); return NULL; }
+    unifier_init(&lambda2);
+    bool* used_arguments = (bool*)calloc(MAX_UNIQUE, sizeof(bool));
+    if (!used_arguments) { free(variables); free(all_arguments); free_hypergraph(template_graph); free_characteristics(chars1); free_characteristics(chars2); return NULL; }
     
-    if (!search_lambda2(H, g2, &lambda2, vars, var_cnt, all_args, all_cnt, used_args,
-                        c1, c2, &lambda1)) {
-        free(vars); free(all_args); free(used_args);
-        uni_clear(&lambda1); uni_clear(&lambda2);
-        free_hg(H);
-        free_char(c1);
-        free_char(c2);
+    if (!search_lambda2(template_graph, graph2, &lambda2, variables, var_count, all_arguments, all_count, used_arguments,
+                        chars1, chars2, &lambda1)) {
+        free(variables); free(all_arguments); free(used_arguments);
+        unifier_clear(&lambda1); unifier_clear(&lambda2);
+        free_hypergraph(template_graph);
+        free_characteristics(chars1);
+        free_characteristics(chars2);
         return NULL;
     }
     
-    Unifier* result = compose(&lambda1, &lambda2);
+    Unifier* result = compose_unifiers(&lambda1, &lambda2);
     
-    free(vars); free(all_args); free(used_args);
-    uni_clear(&lambda1); uni_clear(&lambda2);
-    free_hg(H);
-    free_char(c1);
-    free_char(c2);
+    free(variables); free(all_arguments); free(used_arguments);
+    unifier_clear(&lambda1); unifier_clear(&lambda2);
+    free_hypergraph(template_graph);
+    free_characteristics(chars1);
+    free_characteristics(chars2);
     
     return result;
 }

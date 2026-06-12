@@ -2,33 +2,33 @@
 #include <stdlib.h>
 #include "isom.h"
 
-void print_uni(Unifier* u) {
-    if (!u || u->cnt == 0) { printf("  (none)\n"); return; }
-    for (int i = 0; i < u->cnt; i++) {
-        printf("  %s -> %s\n", u->subs[i].var, u->subs[i].val);
+void print_unifier(Unifier* unifier) {
+    if (!unifier || unifier->count == 0) { printf("  (none)\n"); return; }
+    for (int i = 0; i < unifier->count; i++) {
+        printf("  %s -> %s\n", unifier->subs[i].from, unifier->subs[i].to);
     }
 }
 
-void test(const char* name, const char* g1_str, const char* g2_str) {
+void test(const char* name, const char* graph1_str, const char* graph2_str) {
     printf("=== %s ===\n", name);
-    Hypergraph* G1 = parse_hg(g1_str);
-    Hypergraph* G2 = parse_hg(g2_str);
+    Hypergraph* graph1 = parse_hypergraph(graph1_str);
+    Hypergraph* graph2 = parse_hypergraph(graph2_str);
     
-    printf("G1: "); print_hg(G1);
-    printf("G2: "); print_hg(G2);
+    printf("G1: "); print_hypergraph(graph1);
+    printf("G2: "); print_hypergraph(graph2);
     
-    Unifier* uni = check_iso(G1, G2);
+    Unifier* unifier = check_isomorphism(graph1, graph2);
     
-    printf("Result: %s\n", uni ? "ISOMORPHIC" : "NOT ISOMORPHIC");
-    if (uni) {
+    printf("Result: %s\n", unifier ? "ISOMORPHIC" : "NOT ISOMORPHIC");
+    if (unifier) {
         printf("Unifier (one of possible):\n");
-        print_uni(uni);
-        uni_free(uni);
+        print_unifier(unifier);
+        unifier_free(unifier);
     }
     printf("\n");
     
-    free_hg(G1);
-    free_hg(G2);
+    free_hypergraph(graph1);
+    free_hypergraph(graph2);
 }
 
 char* read_file(const char* path) {
@@ -56,22 +56,22 @@ int main(int argc, char* argv[]) {
             s1 = strdup(argv[1]);
             s2 = strdup(argv[2]);
         }
-        Hypergraph* G1 = parse_hg(s1);
-        Hypergraph* G2 = parse_hg(s2);
+        Hypergraph* graph1 = parse_hypergraph(s1);
+        Hypergraph* graph2 = parse_hypergraph(s2);
         free(s1); free(s2);
-        if (!G1 || !G2) {
+        if (!graph1 || !graph2) {
             fprintf(stderr, "Parse error\n");
-            free_hg(G1); free_hg(G2);
+            free_hypergraph(graph1); free_hypergraph(graph2);
             return 1;
         }
-        Unifier* uni = check_iso(G1, G2);
-        printf("%s\n", uni ? "ISOMORPHIC" : "NOT ISOMORPHIC");
-        if (uni) {
-            for (int i = 0; i < uni->cnt; i++)
-                printf("%s -> %s\n", uni->subs[i].var, uni->subs[i].val);
-            uni_free(uni);
+        Unifier* unifier = check_isomorphism(graph1, graph2);
+        printf("%s\n", unifier ? "ISOMORPHIC" : "NOT ISOMORPHIC");
+        if (unifier) {
+            for (int i = 0; i < unifier->count; i++)
+                printf("%s -> %s\n", unifier->subs[i].from, unifier->subs[i].to);
+            unifier_free(unifier);
         }
-        free_hg(G1); free_hg(G2);
+        free_hypergraph(graph1); free_hypergraph(graph2);
         return 0;
     }
     

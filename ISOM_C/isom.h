@@ -19,28 +19,26 @@ typedef struct {
 
 typedef struct {
     Hyperedge edges[MAX_EDGES];
-    int edge_cnt;
+    int edge_count;
     int arity;
 } Hypergraph;
 
 typedef struct {
-    char var[MAX_NAME];
-    char val[MAX_NAME];
+    char from[MAX_NAME];
+    char to[MAX_NAME];
 } Sub;
 
 typedef struct {
     Sub* subs;
-    int cnt;
-    int cap;
+    int count;
+    int capacity;
 } Unifier;
 
-// Функции
-Hypergraph* parse_hg(const char* str);
-void free_hg(Hypergraph* g);
-void print_hg(Hypergraph* g);
+Hypergraph* parse_hypergraph(const char* string);
+void free_hypergraph(Hypergraph* graph);
+void print_hypergraph(Hypergraph* graph);
 
-// Главная функция: возвращает ОДИН унификатор (или NULL, если не изоморфны)
-Unifier* check_iso(Hypergraph* g1, Hypergraph* g2);
-void uni_free(Unifier* u);
+Unifier* check_isomorphism(Hypergraph* graph1, Hypergraph* graph2);
+void unifier_free(Unifier* unifier);
 
 #endif
