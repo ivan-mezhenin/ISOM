@@ -8,8 +8,8 @@
 
 #define MAX_NAME 50
 #define MAX_ARGS 20
-#define MAX_EDGES 10000
-#define MAX_UNIQUE 50000
+#define MAX_UNIQUE 500000
+#define EDGE_INIT_CAPACITY 1024
 
 // A single atomic formula: pred(args[0], ..., args[arity-1])
 typedef struct {
@@ -20,8 +20,9 @@ typedef struct {
 
 // An elementary conjunction of atomic formulas
 typedef struct {
-    Hyperedge edges[MAX_EDGES];
+    Hyperedge* edges;
     int edge_count;
+    int edge_capacity;
     int max_arity;
 } Hypergraph;
 

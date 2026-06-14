@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "isom.h"
 
 void test(const char* name, const char* graph1_str, const char* graph2_str) {
@@ -70,6 +71,10 @@ int main(int argc, char* argv[]) {
             s1 = strdup(argv[1]);
             s2 = strdup(argv[2]);
         }
+
+        struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
         Hypergraph* graph1 = parse_hypergraph(s1);
         Hypergraph* graph2 = parse_hypergraph(s2);
         free(s1); free(s2);
@@ -79,6 +84,12 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         Unifier* unifier = check_isomorphism(graph1, graph2);
+
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        double elapsed_ms = (end.tv_sec - start.tv_sec) * 1000.0
+                          + (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
+        printf("ELAPSED_MS: %.3f\n", elapsed_ms);
         printf("%s\n", unifier ? "ISOMORPHIC" : "NOT ISOMORPHIC");
         if (unifier) {
             for (int i = 0; i < unifier->count; i++)
